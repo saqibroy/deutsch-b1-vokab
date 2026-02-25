@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>DeutschTrainer — B1 Vocabulary Practice | telc Prüfung</title>
+  <meta name="description" content="Free B1 German vocabulary trainer with flashcards, spaced repetition, typing practice, and progress tracking. Perfect for telc B1 exam preparation.">
+  <meta name="keywords" content="German B1, vocabulary, telc, Deutsch, Vokabeltrainer, flashcards, spaced repetition, language learning">
+  <meta name="author" content="DeutschTrainer">
+  <meta name="theme-color" content="#4ade80">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="DeutschTrainer — B1 Vocabulary Practice">
+  <meta property="og:description" content="Practice German B1 vocabulary with smart flashcards and spaced repetition. Free, offline-ready PWA.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="DeutschTrainer — B1 Vocabulary Practice">
+  <meta name="twitter:description" content="Practice German B1 vocabulary with smart flashcards and spaced repetition.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DeutschTrainer">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "DeutschTrainer",
+    "description": "B1 German vocabulary practice with flashcards and spaced repetition",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Feedback flash overlay -->
+  <div class="feedback-overlay" id="feedbackOverlay" aria-hidden="true"></div>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="container">
+    <header class="header">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <a href="/" class="logo" aria-label="DeutschTrainer Home">
+          <span class="logo-icon">🇩🇪</span>
+          Deutsch<span>Trainer</span>
+        </a>
+        <span class="badge">telc B1</span>
+        <span class="streak-badge" id="streakBadge"></span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="addWordsBtn" data-tooltip="Add Words" aria-label="Add words">＋</button>
+        <button class="icon-btn" id="statsBtn" data-tooltip="Stats" aria-label="View stats">📊</button>
+        <button class="icon-btn" id="resetBtn" data-tooltip="Reset" aria-label="Reset progress">↺</button>
+      </div>
+    </header>
+  </div>
+
+  <!-- ═══ STATS BAR ═══ -->
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Correct</div>
+        <div class="stat-value green" id="statCorrect">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Wrong</div>
+        <div class="stat-value red" id="statWrong">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Accuracy</div>
+        <div class="stat-value gold" id="statAccuracy">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Strong</div>
+        <div class="stat-value green" id="statStrong">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Streak</div>
+        <div class="stat-value gold" id="statStreak">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROGRESS ═══ -->
+  <div class="container">
+    <div class="progress-section">
+      <div class="progress-track">
+        <div class="progress-segment strong" id="progStrong" style="width:0%"></div>
+        <div class="progress-segment decent" id="progDecent" style="width:0%"></div>
+        <div class="progress-segment learning" id="progLearning" style="width:0%"></div>
+        <div class="progress-segment weak" id="progWeak" style="width:0%"></div>
+      </div>
+      <div class="progress-labels">
+        <span id="progressLeft">0 mastered</span>
+        <span id="progressRight">0 words</span>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot new"></div> New</div>
+      <div class="legend-item"><div class="legend-dot weak"></div> Weak</div>
+      <div class="legend-item"><div class="legend-dot learning"></div> Learning</div>
+      <div class="legend-item"><div class="legend-dot strong"></div> Strong</div>
+    </div>
+  </div>
+
+  <!-- ═══ CONTROLS ═══ -->
+  <div class="container">
+    <div class="controls-row">
+      <div class="mode-bar">
+        <span class="mode-label">Mode</span>
+        <button class="mode-btn active" id="modeFlash">Flashcard</button>
+        <button class="mode-btn" id="modeType">Type</button>
+        <button class="mode-btn" id="modeMatch">Match</button>
+      </div>
+      <div class="mode-bar">
+        <span class="mode-label">Show</span>
+        <button class="mode-btn active" id="dirDE">DE → EN</button>
+        <button class="mode-btn" id="dirEN">EN → DE</button>
+        <button class="mode-btn" id="dirMix">Mix 🔀</button>
+      </div>
+    </div>
+    <div class="cat-filter" id="catFilter"></div>
+  </div>
+
+  <!-- ═══ MAIN PRACTICE AREA ═══ -->
+  <div class="container">
+    <!-- Flash card -->
+    <div class="card-scene" id="cardScene" role="button" tabindex="0" aria-label="Flashcard — click or press space to flip">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face card-front">
+          <div class="card-meta">
+            <div class="strength-dot" id="strengthDot"></div>
+            <span class="card-cat" id="cardCatText">Education</span>
+          </div>
+          <span class="card-lang-badge de" id="cardLangBadge">DE</span>
+          <div class="card-counter" id="cardCounter">1 / 58</div>
+          <div class="card-type" id="cardType">Noun (m)</div>
+          <div class="card-word" id="cardFrontWord">der Wortschatz</div>
+          <div class="card-hint" id="tapHint">tap to reveal →</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-word" id="cardBackWord">vocabulary</div>
+          <div class="card-example" id="cardExample">Ich möchte meinen <strong>Wortschatz</strong> erweitern.</div>
+          <div class="card-hint">← tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Type mode input -->
+    <div class="type-input-wrap" id="typeInputWrap">
+      <input
+        type="text"
+        class="type-input"
+        id="typeInput"
+        placeholder="Type the translation..."
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        aria-label="Type your answer"
+      >
+      <button class="type-submit" id="typeSubmit">Check ✓</button>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="actions actions-hidden" id="actionButtons">
+      <button class="action-btn btn-wrong" id="btnWrong" aria-label="Mark as wrong">✗ Didn't know</button>
+      <button class="action-btn btn-right" id="btnRight" aria-label="Mark as correct">✓ Got it</button>
+    </div>
+
+    <!-- Keyboard hints (desktop only) -->
+    <div class="kbd-hints" id="kbdHints">
+      <span class="kbd-hint"><kbd>Space</kbd> flip</span>
+      <span class="kbd-hint"><kbd>←</kbd> wrong</span>
+      <span class="kbd-hint"><kbd>→</kbd> correct</span>
+      <span class="kbd-hint"><kbd>N</kbd> skip</span>
+    </div>
+
+    <!-- ═══ MATCH GAME ═══ -->
+    <div class="match-container" id="matchContainer" style="display:none;">
+      <div class="match-header">
+        <div class="match-info">
+          <span class="match-round" id="matchRound">Round 1</span>
+          <span class="match-pairs" id="matchPairs">0 / 6 matched</span>
+        </div>
+        <div class="match-timer" id="matchTimer">0:00</div>
+      </div>
+      <div class="match-grid" id="matchGrid"></div>
+      <div class="match-result" id="matchResult" style="display:none;">
+        <div class="match-result-icon" id="matchResultIcon">🎉</div>
+        <div class="match-result-title" id="matchResultTitle">Round Complete!</div>
+        <div class="match-result-stats" id="matchResultStats"></div>
+        <button class="modal-btn primary" id="matchNextRound">Next Round →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ WORD LIST ═══ -->
+  <div class="container" style="padding-bottom:24px;">
+    <div class="toolbar">
+      <button class="toolbar-btn" id="listToggle">▾ All words</button>
+      <span id="sessionLabel" style="font-size:0.72rem;color:var(--text-muted);"></span>
+      <div class="toolbar-spacer"></div>
+    </div>
+
+    <div class="word-list" id="wordList">
+      <div class="word-list-search">
+        <input type="text" id="wordSearch" placeholder="Search words..." aria-label="Search vocabulary list">
+      </div>
+      <div class="word-list-header">
+        <span>German</span>
+        <span>English</span>
+        <span>Level</span>
+      </div>
+      <div class="word-list-body" id="wordListBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ ADD WORDS MODAL ═══ -->
+  <div class="modal-overlay" id="addModal" role="dialog" aria-labelledby="addModalTitle">
+    <div class="modal">
+      <h2 class="modal-title" id="addModalTitle">➕ Add Words</h2>
+      <p class="modal-subtitle">Expand your vocabulary — add single words or import in bulk.</p>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="single">Single Word</button>
+        <button class="modal-tab" data-tab="bulk">Bulk Import</button>
+      </div>
+
+      <!-- Single word panel -->
+      <div class="modal-panel active" data-panel="single">
+        <div class="form-group">
+          <label class="form-label" for="addDe">German</label>
+          <input class="form-input" id="addDe" type="text" placeholder="z.B. die Wohnung">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="addEn">English</label>
+          <input class="form-input" id="addEn" type="text" placeholder="e.g. apartment">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="addType">Type <span style="color:var(--text-muted)">(optional)</span></label>
+          <input class="form-input" id="addType" type="text" placeholder="Noun (f), Verb, Adjective...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="addCat">Category <span style="color:var(--text-muted)">(optional)</span></label>
+          <input class="form-input" id="addCat" type="text" placeholder="Living, Work, Custom...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="addEx">Example sentence <span style="color:var(--text-muted)">(optional)</span></label>
+          <input class="form-input" id="addEx" type="text" placeholder="Ich suche eine neue {Wohnung}.">
+        </div>
+        <div class="form-tip">
+          💡 <strong>Tip:</strong> Use <code>{curly braces}</code> around the target word in the example — it will be highlighted on the card.
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="addSingleBtn">Add Word</button>
+          <button class="modal-btn secondary" id="closeAddModal">Close</button>
+        </div>
+      </div>
+
+      <!-- Bulk import panel -->
+      <div class="modal-panel" data-panel="bulk">
+        <div class="form-group">
+          <label class="form-label" for="bulkInput">Paste words (one per line)</label>
+          <textarea class="form-input" id="bulkInput" placeholder="die Wohnung | apartment | Noun (f) | Living | Ich suche eine neue {Wohnung}.
+der Beruf | profession | Noun (m) | Work | Was ist dein {Beruf}?
+verstehen | to understand | Verb | Communication | Ich {verstehe} das nicht."></textarea>
+        </div>
+        <div class="form-tip">
+          💡 <strong>Format:</strong> <code>German | English | Type | Category | Example</code><br>
+          Only German and English are required. Separate fields with <code>|</code> (pipe).<br>
+          Use <code>{curly braces}</code> around the target word in examples.
+        </div>
+        <div class="import-result" id="importResult"></div>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="bulkImportBtn">Import All</button>
+          <button class="modal-btn secondary" id="closeAddModal2">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ STATS DETAIL MODAL ═══ -->
+  <div class="modal-overlay" id="statsModal" role="dialog" aria-labelledby="statsModalTitle">
+    <div class="modal">
+      <h2 class="modal-title" id="statsModalTitle">📊 Your Progress</h2>
+      <p class="modal-subtitle">All-time stats and session history.</p>
+
+      <div class="stats-detail-grid">
+        <div class="stats-detail-card">
+          <div class="stat-value blue" id="allTimeReviews">0</div>
+          <div class="stat-label">Total Reviews</div>
+        </div>
+        <div class="stats-detail-card">
+          <div class="stat-value gold" id="allTimeAccuracy">—</div>
+          <div class="stat-label">All-Time Accuracy</div>
+        </div>
+        <div class="stats-detail-card">
+          <div class="stat-value red" id="allTimeBestStreak">0</div>
+          <div class="stat-label">Best Streak</div>
+        </div>
+        <div class="stats-detail-card">
+          <div class="stat-value green" id="allTimeWords">0</div>
+          <div class="stat-label">Total Words</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Strength Distribution</h3>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <span class="strength-pill pill-new">New: <strong id="distNew">0</strong></span>
+        <span class="strength-pill pill-weak">Weak: <strong id="distWeak">0</strong></span>
+        <span class="strength-pill pill-learning">Learning: <strong id="distLearning">0</strong></span>
+        <span class="strength-pill pill-strong">Strong: <strong id="distStrong">0</strong></span>
+      </div>
+
+      <h3 style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Session History</h3>
+      <div class="history-list" id="historyList"></div>
+
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="modal-btn secondary" id="closeStatsModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <div>Viel Erfolg bei deiner telc B1 Prüfung! 🍀</div>
+    <div style="margin-top:4px;">DeutschTrainer — Practice smarter, not harder.</div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
