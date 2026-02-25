@@ -34,7 +34,7 @@
   let currentIdx = 0;
   let prevIdx = -1;
   let recentHistory = [];  // last N indices shown — to avoid repeats
-  const HISTORY_SIZE = 8;  // don't repeat any of the last 8 words
+  const HISTORY_SIZE = 12; // don't repeat any of the last 12 words
   let isFlipped = false;
   let direction = 'de';   // de | en | mix
   let mode = 'flash';     // flash | type | match
@@ -103,14 +103,20 @@
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) state = JSON.parse(saved);
     } catch (e) { /* ignore */ }
+
     // Ensure every word has state with all required fields
     words.forEach((_, i) => {
       if (!state[i]) {
         state[i] = { strength: 0, correct: 0, wrong: 0, lastSeen: 0 };
       } else {
-        // Migrate old state entries missing lastSeen
         if (!state[i].lastSeen) state[i].lastSeen = 0;
       }
+    });
+
+    // Remove stale state entries for words that no longer exist
+    const validKeys = new Set(words.map((_, i) => String(i)));
+    Object.keys(state).forEach(key => {
+      if (!validKeys.has(key)) delete state[key];
     });
   }
 
@@ -273,40 +279,65 @@
     if (indices.length === 0) return;
 
     // ── Strategy ──
-    // We use a two-phase approach:
-    //  Phase 1: Decide WHAT TYPE of word to show (weak, new, or other)
-    //  Phase 2: Pick a specific word from that pool
-    //
-    // This guarantees weak/wrong words get proper attention instead of
-    // being drowned out by the sheer number of unseen words.
+    // Two-phase: pick a pool type, then pick a word from it.
+    // Hard-block any word in the last N shown to prevent repeats.
 
     const now = Date.now();
 
-    // Categorize all filtered words into pools
+    // Build blocked set — never pick any of the last HISTORY_SIZE words
+    const blocked = new Set(recentHistory);
+
+    // Categorize all filtered words into pools (excluding blocked)
     const pools = { weak: [], new_: [], learning: [], strong: [] };
     for (const i of indices) {
+      if (blocked.has(i)) continue;
       const s = state[i];
-      if (s.strength === 1) pools.weak.push(i);
-      else if (s.strength === 0 && s.correct === 0 && s.wrong === 0) pools.new_.push(i);
-      else if (s.strength === 0) pools.weak.push(i); // answered wrong, dropped back to 0
-      else if (s.strength <= 2) pools.learning.push(i);
-      else pools.strong.push(i);
+      if (s.strength === 1 || (s.strength === 0 && (s.correct > 0 || s.wrong > 0))) {
+        pools.weak.push(i);
+      } else if (s.strength === 0 && s.correct === 0 && s.wrong === 0) {
+        pools.new_.push(i);
+      } else if (s.strength <= 2) {
+        pools.learning.push(i);
+      } else {
+        pools.strong.push(i);
+      }
+    }
+
+    // If ALL words are blocked (tiny word list), fall back to allowing them
+    const totalAvailable = pools.weak.length + pools.new_.length + pools.learning.length + pools.strong.length;
+    if (totalAvailable === 0) {
+      // Re-populate pools without blocking, but exclude only the very last word shown
+      for (const i of indices) {
+        if (i === currentIdx) continue; // at least avoid the immediate current word
+        const s = state[i];
+        if (s.strength === 1 || (s.strength === 0 && (s.correct > 0 || s.wrong > 0))) {
+          pools.weak.push(i);
+        } else if (s.strength === 0 && s.correct === 0 && s.wrong === 0) {
+          pools.new_.push(i);
+        } else if (s.strength <= 2) {
+          pools.learning.push(i);
+        } else {
+          pools.strong.push(i);
+        }
+      }
     }
 
     // ── Phase 1: Pick which pool to draw from ──
-    // Priority: weak words should appear ~50% of the time when they exist,
-    // new words ~30%, learning ~15%, strong ~5%.
-    // If a pool is empty, redistribute its share.
     const poolWeights = [];
-    if (pools.weak.length > 0)     poolWeights.push({ pool: 'weak',     w: 50 });
-    if (pools.new_.length > 0)     poolWeights.push({ pool: 'new_',     w: 30 });
+    if (pools.weak.length > 0)     poolWeights.push({ pool: 'weak',     w: 45 });
+    if (pools.new_.length > 0)     poolWeights.push({ pool: 'new_',     w: 35 });
     if (pools.learning.length > 0) poolWeights.push({ pool: 'learning', w: 15 });
     if (pools.strong.length > 0)   poolWeights.push({ pool: 'strong',   w: 5 });
 
-    // Fallback: if somehow no pools, just use all indices
+    // Fallback
     if (poolWeights.length === 0) {
-      pools.new_ = indices;
-      poolWeights.push({ pool: 'new_', w: 1 });
+      // Absolute fallback: pick any index that's not current
+      const fallback = indices.filter(i => i !== currentIdx);
+      const chosen = fallback.length > 0
+        ? fallback[Math.floor(Math.random() * fallback.length)]
+        : indices[0];
+      commitPick(chosen, now);
+      return;
     }
 
     const poolTotal = poolWeights.reduce((sum, p) => sum + p.w, 0);
@@ -320,43 +351,32 @@
     const candidates = pools[chosenPool];
 
     // ── Phase 2: Pick a word from the chosen pool ──
-    // Within the pool, prefer words NOT recently shown.
-    // Use a mild recency penalty (not the crushing one from before).
+    // Simple weighted random — recency is already handled by the hard-block above.
     const candidateWeights = [];
     for (const i of candidates) {
       const s = state[i];
-      let w = 10; // base weight (equal within pool)
+      let w = 10;
 
-      // Words with more wrongs get slight boost within the pool
+      // Words with more wrongs get a boost
       if (s.wrong > 0) {
         w += Math.min(s.wrong * 2, 10);
       }
 
-      // Recency: prefer words not shown recently, but don't crush them
-      const recentPos = recentHistory.indexOf(i);
-      if (recentPos !== -1) {
-        if (recentPos < 3) {
-          // Last 3 shown: strong penalty — avoid immediate repeats
-          w *= 0.05;
-        } else {
-          // Shown 4-8 ago: mild penalty — they can come back soon
-          w *= 0.4;
-        }
-      }
-
-      // Time-since-last-seen bonus for weak words
-      if (s.lastSeen && chosenPool === 'weak') {
+      // Time-since-last-seen bonus (prefer words not seen recently)
+      if (s.lastSeen) {
         const secsSince = (now - s.lastSeen) / 1000;
         if (secsSince > 30) {
-          // Boost words not seen in last 30 seconds, up to 2x
-          w *= Math.min(2, 1 + secsSince / 120);
+          w *= Math.min(2.5, 1 + secsSince / 60);
         }
+      } else {
+        // Never seen — small boost to introduce new words
+        w *= 1.3;
       }
 
       candidateWeights.push({ idx: i, weight: Math.max(w, 0.01) });
     }
 
-    // Weighted random from candidates
+    // Weighted random
     const totalWeight = candidateWeights.reduce((sum, c) => sum + c.weight, 0);
     let rand = Math.random() * totalWeight;
     let chosen = candidateWeights[0].idx;
@@ -365,6 +385,10 @@
       if (rand <= 0) { chosen = c.idx; break; }
     }
 
+    commitPick(chosen, now);
+  }
+
+  function commitPick(chosen, now) {
     // Update history
     recentHistory.unshift(chosen);
     if (recentHistory.length > HISTORY_SIZE) {
@@ -584,7 +608,7 @@
     if (leveled && typeof confetti === 'function') {
       // Word leveled up to STRONG — big celebration!
       if (s.strength === 4) {
-        showLevelUpBanner('strong', words[currentIdx].de);
+        showLevelUpBanner(prevStrength, s.strength, words[currentIdx].de);
         confetti({ particleCount: 80, angle: 60, spread: 65, origin: { x: 0, y: 0.6 } });
         confetti({ particleCount: 80, angle: 120, spread: 65, origin: { x: 1, y: 0.6 } });
         spawnCelebrationEmoji('💪');
@@ -592,7 +616,7 @@
       }
       // Word leveled up to LEARNING (2) or DECENT (3) — medium celebration
       else if (s.strength >= 2) {
-        showLevelUpBanner('learning', words[currentIdx].de);
+        showLevelUpBanner(prevStrength, s.strength, words[currentIdx].de);
         confetti({ particleCount: 35, spread: 50, origin: { y: 0.6 }, gravity: 1.1 });
       }
     }
@@ -678,27 +702,29 @@
     setTimeout(() => el.remove(), 1300);
   }
 
-  function showLevelUpBanner(level, word) {
+  function showLevelUpBanner(prevLevel, newLevel, word) {
     // Remove any existing banner
     const old = document.querySelector('.level-up-banner');
     if (old) old.remove();
 
     const banner = document.createElement('div');
-    banner.className = 'level-up-banner to-' + level;
+    const isStrong = newLevel === 4;
+    banner.className = 'level-up-banner ' + (isStrong ? 'to-strong' : 'to-learning');
 
-    if (level === 'strong') {
-      banner.innerHTML = `
-        <div class="level-up-banner-icon">💪</div>
-        <div class="level-up-banner-title">Word Mastered!</div>
-        <div class="level-up-banner-sub">"${word}" is now <strong style="color:var(--green)">Strong</strong></div>
-      `;
-    } else {
-      banner.innerHTML = `
-        <div class="level-up-banner-icon">📈</div>
-        <div class="level-up-banner-title">Level Up!</div>
-        <div class="level-up-banner-sub">"${word}" is now <strong style="color:var(--amber)">Learning</strong></div>
-      `;
-    }
+    const prevName = STRENGTH_NAMES[prevLevel];
+    const newName = STRENGTH_NAMES[newLevel];
+    const prevClass = STRENGTH_BADGE_CLASS[prevLevel];
+    const newClass = STRENGTH_BADGE_CLASS[newLevel];
+
+    banner.innerHTML = `
+      <div class="level-up-banner-title">${isStrong ? 'Word Mastered!' : 'Level Up!'}</div>
+      <div class="level-up-banner-word">"${word}"</div>
+      <div class="level-up-transition">
+        <span class="level-up-pill ${prevClass}">${prevName}</span>
+        <span class="level-up-arrow">→</span>
+        <span class="level-up-pill ${newClass}">${newName}</span>
+      </div>
+    `;
 
     document.body.appendChild(banner);
     setTimeout(() => banner.remove(), 2200);
@@ -716,15 +742,13 @@
     $('statWrong').textContent = session.wrong;
     $('statAccuracy').textContent = acc;
 
-    const strong = Object.values(state).filter(s => s.strength >= 4).length;
-    $('statStrong').textContent = strong;
-    $('statStreak').textContent = session.streak > 0 ? session.streak : '—';
-
-    // Progress bar segments
-    const counts = { strong: 0, decent: 0, learning: 0, weak: 0, new_: 0 };
+    // Use the same filtered indices for all stats (respects category filter)
     const filtered = getFilteredIndices();
+
+    // Count strength distribution from filtered words only
+    const counts = { strong: 0, decent: 0, learning: 0, weak: 0, new_: 0 };
     filtered.forEach(i => {
-      const lvl = state[i].strength;
+      const lvl = state[i] ? state[i].strength : 0;
       if (lvl >= 4) counts.strong++;
       else if (lvl === 3) counts.decent++;
       else if (lvl === 2) counts.learning++;
@@ -732,13 +756,18 @@
       else counts.new_++;
     });
 
+    // "Mastered" on dashboard = only strength 4 (truly strong)
+    $('statStrong').textContent = counts.strong;
+    $('statStreak').textContent = session.streak > 0 ? session.streak : '—';
+
+    // Progress bar segments
     const n = filtered.length || 1;
     $('progStrong').style.width = (counts.strong / n * 100) + '%';
     $('progDecent').style.width = (counts.decent / n * 100) + '%';
     $('progLearning').style.width = (counts.learning / n * 100) + '%';
     $('progWeak').style.width = (counts.weak / n * 100) + '%';
 
-    const mastered = counts.strong + counts.decent;
+    const mastered = counts.strong;
     $('progressLeft').textContent = `${mastered} mastered`;
     $('progressRight').textContent = `${filtered.length} words`;
   }
@@ -1232,18 +1261,18 @@
      ══════════════════════════════════════════════════ */
 
   function renderStatsModal() {
-    // Calculate all-time stats
+    // Calculate all-time stats from valid word indices only
     let totalCorrect = 0, totalWrong = 0;
-    Object.values(state).forEach(s => {
+    const dist = [0, 0, 0, 0, 0];
+    words.forEach((_, i) => {
+      const s = state[i];
+      if (!s) return;
       totalCorrect += s.correct;
       totalWrong += s.wrong;
+      dist[s.strength]++;
     });
     const totalReviews = totalCorrect + totalWrong;
     const allTimeAcc = totalReviews > 0 ? Math.round(totalCorrect / totalReviews * 100) + '%' : '—';
-
-    // Strength distribution
-    const dist = [0, 0, 0, 0, 0];
-    Object.values(state).forEach(s => dist[s.strength]++);
 
     $('allTimeReviews').textContent = totalReviews;
     $('allTimeAccuracy').textContent = allTimeAcc;
