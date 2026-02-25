@@ -1,5 +1,5 @@
 // DeutschTrainer Service Worker — Offline caching
-const CACHE_NAME = 'deutschtrainer-v5';
+const CACHE_NAME = 'deutschtrainer-v7';
 const ASSETS = [
   '/',
   '/index.html',

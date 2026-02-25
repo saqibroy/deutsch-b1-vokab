@@ -18,7 +18,7 @@
   // Strength: 0=new, 1=weak, 2=learning, 3=decent, 4=strong
   const STRENGTH_NAMES = ['New', 'Weak', 'Learning', 'Decent', 'Strong'];
   const PILL_CLASSES = ['pill-new', 'pill-weak', 'pill-learning', 'pill-learning', 'pill-strong'];
-  const DOT_COLORS = ['#818cf8', '#f87171', '#facc15', '#facc15', '#4ade80'];
+  const DOT_COLORS = ['#6366f1', '#ef4444', '#f59e0b', '#f59e0b', '#22c55e'];
 
   /* ══════════════════════════════════════════════════
      STATE
@@ -77,6 +77,9 @@
     } else {
       pickNext();
     }
+
+    // Re-initialize icons after dynamic content
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
   function loadWords() {
@@ -176,6 +179,12 @@
     $('closeAddModal').addEventListener('click', () => closeModal('addModal'));
     $('closeAddModal2').addEventListener('click', () => closeModal('addModal'));
     $('closeStatsModal').addEventListener('click', () => closeModal('statsModal'));
+
+    // X close buttons
+    const closeAddX = $('closeAddModalX');
+    if (closeAddX) closeAddX.addEventListener('click', () => closeModal('addModal'));
+    const closeStatsX = $('closeStatsModalX');
+    if (closeStatsX) closeStatsX.addEventListener('click', () => closeModal('statsModal'));
 
     // Modal tab switching
     $$('.modal-tab').forEach(tab => {
@@ -436,6 +445,16 @@
       typeWrap.classList.remove('show');
       $('cardScene').style.pointerEvents = '';
     }
+
+    // Re-initialize lucide icons for any new elements
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Animate card entrance
+    const scene = $('cardScene');
+    scene.classList.remove('card-enter', 'card-correct', 'card-wrong');
+    void scene.offsetWidth;
+    scene.classList.add('card-enter');
+    setTimeout(() => scene.classList.remove('card-enter'), 500);
   }
 
   function flipCard() {
@@ -489,6 +508,12 @@
     inp.className = 'type-input ' + (isCorrect ? 'correct' : 'incorrect');
     inp.disabled = true;
 
+    // Show celebration for typed correct answers
+    if (isCorrect && typeof confetti === 'function') {
+      confetti({ particleCount: 30, spread: 45, origin: { y: 0.65 }, gravity: 1.1 });
+      spawnCelebrationEmoji('✨');
+    }
+
     // Auto-mark based on typed result
     $('cardInner').classList.add('flipped');
     isFlipped = true;
@@ -523,10 +548,49 @@
 
     saveState();
     flashFeedback('right');
+    animateCard('correct');
+    animateStatBump('statCorrect', 'up');
     updateStats();
     updateStreakBadge();
     renderWordList();
-    setTimeout(pickNext, 280);
+
+    // Celebrate with confetti and emojis on every correct answer!
+    if (typeof confetti === 'function') {
+      // Small burst on every correct
+      confetti({ particleCount: 25, spread: 40, origin: { y: 0.65 }, gravity: 1.2, scalar: 0.8 });
+      
+      // Bigger bursts at milestones
+      if (session.streak === 3) {
+        confetti({ particleCount: 50, spread: 55, origin: { y: 0.6 } });
+        spawnCelebrationEmoji('🔥');
+      } else if (session.streak === 5) {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.55 } });
+        spawnCelebrationEmoji('⭐');
+      } else if (session.streak === 10) {
+        // Double burst from both sides
+        confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } });
+        confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } });
+        spawnCelebrationEmoji('🏆');
+      } else if (session.streak > 0 && session.streak % 25 === 0) {
+        // Fireworks!
+        const duration = 1500;
+        const end = Date.now() + duration;
+        (function frame() {
+          confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0, y: 0.65 } });
+          confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1, y: 0.65 } });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        })();
+        spawnCelebrationEmoji('🎆');
+      }
+      
+      // Level up celebration (when strength increases to a new level)
+      if (s.strength === 4) {
+        spawnCelebrationEmoji('💪');
+        confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 }, colors: ['#22c55e', '#10b981', '#059669'] });
+      }
+    }
+
+    setTimeout(pickNext, 350);
   }
 
   function markWrong() {
@@ -539,16 +603,51 @@
 
     saveState();
     flashFeedback('wrong');
+    animateCard('wrong');
+    animateStatBump('statWrong', 'down');
     updateStats();
     updateStreakBadge();
     renderWordList();
-    setTimeout(pickNext, 280);
+    setTimeout(pickNext, 400);
   }
 
   function flashFeedback(type) {
     const ov = $('feedbackOverlay');
     ov.className = 'feedback-overlay show-' + type;
-    setTimeout(() => { ov.className = 'feedback-overlay'; }, 350);
+    setTimeout(() => { ov.className = 'feedback-overlay'; }, 600);
+  }
+
+  function animateCard(type) {
+    const scene = $('cardScene');
+    scene.classList.remove('card-correct', 'card-wrong', 'card-enter');
+    // Force reflow
+    void scene.offsetWidth;
+    scene.classList.add('card-' + type);
+    setTimeout(() => scene.classList.remove('card-' + type), 600);
+  }
+
+  function animateStatBump(statId, dir) {
+    const el = $(statId);
+    if (!el) return;
+    el.classList.remove('bump', 'bump-down');
+    void el.offsetWidth;
+    el.classList.add(dir === 'up' ? 'bump' : 'bump-down');
+    setTimeout(() => el.classList.remove('bump', 'bump-down'), 500);
+  }
+
+  function spawnCelebrationEmoji(emoji) {
+    const el = document.createElement('div');
+    el.className = 'celebration-emoji';
+    el.textContent = emoji;
+    
+    // Position near the card center
+    const card = $('cardScene');
+    const rect = card ? card.getBoundingClientRect() : { left: window.innerWidth / 2 - 20, top: window.innerHeight / 2 };
+    el.style.left = (rect.left + rect.width / 2 - 16 + (Math.random() - 0.5) * 80) + 'px';
+    el.style.top = (rect.top + rect.height / 2) + 'px';
+    
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
   }
 
   /* ══════════════════════════════════════════════════
@@ -653,7 +752,13 @@
   function toggleList() {
     listOpen = !listOpen;
     $('wordList').classList.toggle('open', listOpen);
-    $('listToggle').innerHTML = (listOpen ? '▴' : '▾') + ' All words <span style="color:var(--text-muted)">(' + words.length + ')</span>';
+    const btn = $('listToggle');
+    btn.classList.toggle('open', listOpen);
+    // Update text inside the button
+    const spans = btn.querySelectorAll('span');
+    if (spans.length > 0) {
+      spans[0].textContent = (listOpen ? 'Hide words' : 'All words') + ' (' + words.length + ')';
+    }
   }
 
   /* ══════════════════════════════════════════════════
@@ -902,6 +1007,11 @@
         matchSelected = null;
         matchBusy = false;
 
+        // Small confetti burst on each correct match
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 20, spread: 35, origin: { y: 0.6 }, gravity: 1.3, scalar: 0.7 });
+        }
+
         // Check round completion
         if (matchPairsFound === MATCH_PAIRS) {
           setTimeout(endMatchRound, 500);
@@ -938,6 +1048,24 @@
     $('matchResultIcon').textContent = perfect ? '🎉' : (matchMistakes <= 2 ? '👏' : '💪');
     $('matchResultTitle').textContent = perfect ? 'Perfect Round!' : 'Round Complete!';
 
+    // Fire confetti on round completion
+    if (typeof confetti === 'function') {
+      if (perfect) {
+        // Big celebration: fireworks from both sides
+        confetti({ particleCount: 80, angle: 60, spread: 65, origin: { x: 0, y: 0.6 } });
+        confetti({ particleCount: 80, angle: 120, spread: 65, origin: { x: 1, y: 0.6 } });
+        setTimeout(() => {
+          confetti({ particleCount: 50, spread: 100, origin: { y: 0.4 } });
+        }, 300);
+        spawnCelebrationEmoji('🎉');
+        spawnCelebrationEmoji('⭐');
+      } else {
+        // Smaller celebration for non-perfect
+        confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
+        spawnCelebrationEmoji('👏');
+      }
+    }
+
     const minutes = Math.floor(matchTimerSec / 60);
     const seconds = matchTimerSec % 60;
     const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
@@ -960,12 +1088,18 @@
   function startMatchTimer() {
     stopMatchTimer();
     matchTimerSec = 0;
-    $('matchTimer').textContent = '0:00';
+    const timerEl = $('matchTimer');
+    const timerSpan = timerEl.querySelector('span');
+    if (timerSpan) timerSpan.textContent = '0:00';
+    else timerEl.textContent = '0:00';
     matchTimerInterval = setInterval(() => {
       matchTimerSec++;
       const m = Math.floor(matchTimerSec / 60);
       const s = matchTimerSec % 60;
-      $('matchTimer').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+      const timeText = m + ':' + (s < 10 ? '0' : '') + s;
+      const span = timerEl.querySelector('span');
+      if (span) span.textContent = timeText;
+      else timerEl.textContent = timeText;
     }, 1000);
   }
 
