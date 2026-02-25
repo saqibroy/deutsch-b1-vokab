@@ -9,7 +9,7 @@
   <meta name="description" content="Free B1 German vocabulary trainer with flashcards, spaced repetition, typing practice, and progress tracking. Perfect for telc B1 exam preparation.">
   <meta name="keywords" content="German B1, vocabulary, telc, Deutsch, Vokabeltrainer, flashcards, spaced repetition, language learning">
   <meta name="author" content="DeutschTrainer">
-  <meta name="theme-color" content="#4ade80">
+  <meta name="theme-color" content="#0f0f12">
   <meta name="color-scheme" content="dark">
 
   <!-- Open Graph -->
@@ -37,7 +37,13 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Confetti for celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
@@ -64,194 +70,285 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- ═══ HEADER ═══ -->
-  <div class="container">
-    <header class="header">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+  <header class="header">
+    <div class="header-inner container">
+      <div class="header-left">
         <a href="/" class="logo" aria-label="DeutschTrainer Home">
-          <span class="logo-icon">🇩🇪</span>
-          Deutsch<span>Trainer</span>
+          <div class="logo-mark">D</div>
+          <div class="logo-text">
+            <span class="logo-name">DeutschTrainer</span>
+            <span class="logo-tag">telc B1 · Vokabeltrainer</span>
+          </div>
         </a>
-        <span class="badge">telc B1</span>
         <span class="streak-badge" id="streakBadge"></span>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" id="addWordsBtn" data-tooltip="Add Words" aria-label="Add words">＋</button>
-        <button class="icon-btn" id="statsBtn" data-tooltip="Stats" aria-label="View stats">📊</button>
-        <button class="icon-btn" id="resetBtn" data-tooltip="Reset" aria-label="Reset progress">↺</button>
-      </div>
-    </header>
-  </div>
-
-  <!-- ═══ STATS BAR ═══ -->
-  <div class="container">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Correct</div>
-        <div class="stat-value green" id="statCorrect">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Wrong</div>
-        <div class="stat-value red" id="statWrong">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Accuracy</div>
-        <div class="stat-value gold" id="statAccuracy">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Strong</div>
-        <div class="stat-value green" id="statStrong">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Streak</div>
-        <div class="stat-value gold" id="statStreak">—</div>
+        <span id="sessionLabel" class="session-greeting"></span>
+        <button class="icon-btn" id="addWordsBtn" data-tooltip="Add Words" aria-label="Add words">
+          <i data-lucide="plus"></i>
+        </button>
+        <button class="icon-btn" id="statsBtn" data-tooltip="Stats" aria-label="View stats">
+          <i data-lucide="bar-chart-3"></i>
+        </button>
+        <button class="icon-btn" id="resetBtn" data-tooltip="Reset" aria-label="Reset progress">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
       </div>
     </div>
-  </div>
+  </header>
 
-  <!-- ═══ PROGRESS ═══ -->
-  <div class="container">
-    <div class="progress-section">
-      <div class="progress-track">
-        <div class="progress-segment strong" id="progStrong" style="width:0%"></div>
-        <div class="progress-segment decent" id="progDecent" style="width:0%"></div>
-        <div class="progress-segment learning" id="progLearning" style="width:0%"></div>
-        <div class="progress-segment weak" id="progWeak" style="width:0%"></div>
-      </div>
-      <div class="progress-labels">
-        <span id="progressLeft">0 mastered</span>
-        <span id="progressRight">0 words</span>
-      </div>
-    </div>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot new"></div> New</div>
-      <div class="legend-item"><div class="legend-dot weak"></div> Weak</div>
-      <div class="legend-item"><div class="legend-dot learning"></div> Learning</div>
-      <div class="legend-item"><div class="legend-dot strong"></div> Strong</div>
-    </div>
-  </div>
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main">
 
-  <!-- ═══ CONTROLS ═══ -->
-  <div class="container">
-    <div class="controls-row">
-      <div class="mode-bar">
-        <span class="mode-label">Mode</span>
-        <button class="mode-btn active" id="modeFlash">Flashcard</button>
-        <button class="mode-btn" id="modeType">Type</button>
-        <button class="mode-btn" id="modeMatch">Match</button>
-      </div>
-      <div class="mode-bar">
-        <span class="mode-label">Show</span>
-        <button class="mode-btn active" id="dirDE">DE → EN</button>
-        <button class="mode-btn" id="dirEN">EN → DE</button>
-        <button class="mode-btn" id="dirMix">Mix 🔀</button>
-      </div>
-    </div>
-    <div class="cat-filter" id="catFilter"></div>
-  </div>
-
-  <!-- ═══ MAIN PRACTICE AREA ═══ -->
-  <div class="container">
-    <!-- Flash card -->
-    <div class="card-scene" id="cardScene" role="button" tabindex="0" aria-label="Flashcard — click or press space to flip">
-      <div class="card-inner" id="cardInner">
-        <div class="card-face card-front">
-          <div class="card-meta">
-            <div class="strength-dot" id="strengthDot"></div>
-            <span class="card-cat" id="cardCatText">Education</span>
+    <!-- ═══ DASHBOARD STRIP ═══ -->
+    <section class="container">
+      <div class="dashboard">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon green"><i data-lucide="check-circle-2"></i></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statCorrect">0</div>
+              <div class="stat-label">Correct</div>
+            </div>
           </div>
-          <span class="card-lang-badge de" id="cardLangBadge">DE</span>
-          <div class="card-counter" id="cardCounter">1 / 58</div>
-          <div class="card-type" id="cardType">Noun (m)</div>
-          <div class="card-word" id="cardFrontWord">der Wortschatz</div>
-          <div class="card-hint" id="tapHint">tap to reveal →</div>
+          <div class="stat-card">
+            <div class="stat-icon red"><i data-lucide="x-circle"></i></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statWrong">0</div>
+              <div class="stat-label">Wrong</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber"><i data-lucide="target"></i></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statAccuracy">—</div>
+              <div class="stat-label">Accuracy</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon emerald"><i data-lucide="trophy"></i></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statStrong">0</div>
+              <div class="stat-label">Mastered</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange"><i data-lucide="flame"></i></div>
+            <div class="stat-content">
+              <div class="stat-value" id="statStreak">—</div>
+              <div class="stat-label">Streak</div>
+            </div>
+          </div>
         </div>
-        <div class="card-face card-back">
-          <div class="card-word" id="cardBackWord">vocabulary</div>
-          <div class="card-example" id="cardExample">Ich möchte meinen <strong>Wortschatz</strong> erweitern.</div>
-          <div class="card-hint">← tap to flip back</div>
+
+        <!-- Progress -->
+        <div class="progress-section">
+          <div class="progress-track">
+            <div class="progress-segment strong" id="progStrong" style="width:0%"></div>
+            <div class="progress-segment decent" id="progDecent" style="width:0%"></div>
+            <div class="progress-segment learning" id="progLearning" style="width:0%"></div>
+            <div class="progress-segment weak" id="progWeak" style="width:0%"></div>
+          </div>
+          <div class="progress-labels">
+            <span id="progressLeft">0 mastered</span>
+            <div class="legend">
+              <span class="legend-item"><span class="legend-dot new"></span>New</span>
+              <span class="legend-item"><span class="legend-dot weak"></span>Weak</span>
+              <span class="legend-item"><span class="legend-dot learning"></span>Learning</span>
+              <span class="legend-item"><span class="legend-dot strong"></span>Strong</span>
+            </div>
+            <span id="progressRight">0 words</span>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Type mode input -->
-    <div class="type-input-wrap" id="typeInputWrap">
-      <input
-        type="text"
-        class="type-input"
-        id="typeInput"
-        placeholder="Type the translation..."
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
-        aria-label="Type your answer"
-      >
-      <button class="type-submit" id="typeSubmit">Check ✓</button>
-    </div>
-
-    <!-- Action buttons -->
-    <div class="actions actions-hidden" id="actionButtons">
-      <button class="action-btn btn-wrong" id="btnWrong" aria-label="Mark as wrong">✗ Didn't know</button>
-      <button class="action-btn btn-right" id="btnRight" aria-label="Mark as correct">✓ Got it</button>
-    </div>
-
-    <!-- Keyboard hints (desktop only) -->
-    <div class="kbd-hints" id="kbdHints">
-      <span class="kbd-hint"><kbd>Space</kbd> flip</span>
-      <span class="kbd-hint"><kbd>←</kbd> wrong</span>
-      <span class="kbd-hint"><kbd>→</kbd> correct</span>
-      <span class="kbd-hint"><kbd>N</kbd> skip</span>
-    </div>
-
-    <!-- ═══ MATCH GAME ═══ -->
-    <div class="match-container" id="matchContainer" style="display:none;">
-      <div class="match-header">
-        <div class="match-info">
-          <span class="match-round" id="matchRound">Round 1</span>
-          <span class="match-pairs" id="matchPairs">0 / 6 matched</span>
+    <!-- ═══ CONTROLS ═══ -->
+    <section class="container">
+      <div class="controls">
+        <div class="control-group">
+          <div class="segment-control">
+            <button class="segment-btn active" id="modeFlash">
+              <i data-lucide="layers"></i>
+              <span>Flash</span>
+            </button>
+            <button class="segment-btn" id="modeType">
+              <i data-lucide="keyboard"></i>
+              <span>Type</span>
+            </button>
+            <button class="segment-btn" id="modeMatch">
+              <i data-lucide="grid-2x2"></i>
+              <span>Match</span>
+            </button>
+          </div>
         </div>
-        <div class="match-timer" id="matchTimer">0:00</div>
+        <div class="control-group">
+          <div class="segment-control direction-control">
+            <button class="segment-btn active" id="dirDE">DE → EN</button>
+            <button class="segment-btn" id="dirEN">EN → DE</button>
+            <button class="segment-btn" id="dirMix">
+              <i data-lucide="shuffle"></i>
+              <span>Mix</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="match-grid" id="matchGrid"></div>
-      <div class="match-result" id="matchResult" style="display:none;">
-        <div class="match-result-icon" id="matchResultIcon">🎉</div>
-        <div class="match-result-title" id="matchResultTitle">Round Complete!</div>
-        <div class="match-result-stats" id="matchResultStats"></div>
-        <button class="modal-btn primary" id="matchNextRound">Next Round →</button>
-      </div>
-    </div>
-  </div>
+      <div class="cat-filter" id="catFilter"></div>
+    </section>
 
-  <!-- ═══ WORD LIST ═══ -->
-  <div class="container" style="padding-bottom:24px;">
-    <div class="toolbar">
-      <button class="toolbar-btn" id="listToggle">▾ All words</button>
-      <span id="sessionLabel" style="font-size:0.72rem;color:var(--text-muted);"></span>
-      <div class="toolbar-spacer"></div>
-    </div>
+    <!-- ═══ PRACTICE AREA ═══ -->
+    <section class="container practice-section">
+      <!-- Flash card -->
+      <div class="card-scene" id="cardScene" role="button" tabindex="0" aria-label="Flashcard — click or press space to flip">
+        <div class="card-inner" id="cardInner">
+          <div class="card-face card-front">
+            <div class="card-top-row">
+              <div class="card-meta">
+                <div class="strength-dot" id="strengthDot"></div>
+                <span class="card-cat" id="cardCatText">Education</span>
+              </div>
+              <div class="card-top-right">
+                <span class="card-lang-badge de" id="cardLangBadge">DE</span>
+                <span class="card-counter" id="cardCounter">1 / 58</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-type" id="cardType">Noun (m)</div>
+              <div class="card-word" id="cardFrontWord">der Wortschatz</div>
+            </div>
+            <div class="card-hint" id="tapHint">
+              <i data-lucide="mouse-pointer-click"></i>
+              <span>Tap to reveal</span>
+            </div>
+          </div>
+          <div class="card-face card-back">
+            <div class="card-body">
+              <div class="card-word" id="cardBackWord">vocabulary</div>
+              <div class="card-example" id="cardExample">Ich möchte meinen <strong>Wortschatz</strong> erweitern.</div>
+            </div>
+            <div class="card-hint">
+              <i data-lucide="rotate-ccw"></i>
+              <span>Tap to flip back</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <div class="word-list" id="wordList">
-      <div class="word-list-search">
-        <input type="text" id="wordSearch" placeholder="Search words..." aria-label="Search vocabulary list">
+      <!-- Type mode input -->
+      <div class="type-input-wrap" id="typeInputWrap">
+        <div class="type-input-inner">
+          <input
+            type="text"
+            class="type-input"
+            id="typeInput"
+            placeholder="Type the translation..."
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="Type your answer"
+          >
+          <button class="type-submit" id="typeSubmit">
+            <i data-lucide="check"></i>
+            <span>Check</span>
+          </button>
+        </div>
       </div>
-      <div class="word-list-header">
-        <span>German</span>
-        <span>English</span>
-        <span>Level</span>
+
+      <!-- Action buttons -->
+      <div class="actions actions-hidden" id="actionButtons">
+        <button class="action-btn btn-wrong" id="btnWrong" aria-label="Mark as wrong">
+          <i data-lucide="x"></i>
+          <span>Didn't know</span>
+        </button>
+        <button class="action-btn btn-right" id="btnRight" aria-label="Mark as correct">
+          <i data-lucide="check"></i>
+          <span>Got it!</span>
+        </button>
       </div>
-      <div class="word-list-body" id="wordListBody"></div>
-    </div>
-  </div>
+
+      <!-- Keyboard hints (desktop only) -->
+      <div class="kbd-hints" id="kbdHints">
+        <span class="kbd-hint"><kbd>Space</kbd> flip</span>
+        <span class="kbd-hint"><kbd>←</kbd> wrong</span>
+        <span class="kbd-hint"><kbd>→</kbd> correct</span>
+        <span class="kbd-hint"><kbd>N</kbd> skip</span>
+      </div>
+
+      <!-- ═══ MATCH GAME ═══ -->
+      <div class="match-container" id="matchContainer" style="display:none;">
+        <div class="match-header">
+          <div class="match-info">
+            <span class="match-round" id="matchRound">Round 1</span>
+            <span class="match-pairs" id="matchPairs">0 / 6 matched</span>
+          </div>
+          <div class="match-timer" id="matchTimer">
+            <i data-lucide="clock"></i>
+            <span>0:00</span>
+          </div>
+        </div>
+        <div class="match-grid" id="matchGrid"></div>
+        <div class="match-result" id="matchResult" style="display:none;">
+          <div class="match-result-icon" id="matchResultIcon">🎉</div>
+          <div class="match-result-title" id="matchResultTitle">Round Complete!</div>
+          <div class="match-result-stats" id="matchResultStats"></div>
+          <button class="btn btn-primary" id="matchNextRound">
+            Next Round
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ WORD LIST ═══ -->
+    <section class="container" style="padding-bottom:32px;">
+      <div class="wordlist-toggle-bar">
+        <button class="wordlist-toggle-btn" id="listToggle">
+          <i data-lucide="book-open"></i>
+          <span>All words</span>
+          <i data-lucide="chevron-down" class="toggle-chevron"></i>
+        </button>
+      </div>
+
+      <div class="word-list" id="wordList">
+        <div class="word-list-search">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="wordSearch" placeholder="Search words..." aria-label="Search vocabulary list">
+        </div>
+        <div class="word-list-header">
+          <span>German</span>
+          <span>English</span>
+          <span>Level</span>
+        </div>
+        <div class="word-list-body" id="wordListBody"></div>
+      </div>
+    </section>
+
+  </main>
 
   <!-- ═══ ADD WORDS MODAL ═══ -->
   <div class="modal-overlay" id="addModal" role="dialog" aria-labelledby="addModalTitle">
     <div class="modal">
-      <h2 class="modal-title" id="addModalTitle">➕ Add Words</h2>
+      <div class="modal-header">
+        <h2 class="modal-title" id="addModalTitle">
+          <i data-lucide="plus-circle"></i>
+          Add Words
+        </h2>
+        <button class="modal-close" id="closeAddModalX" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
       <p class="modal-subtitle">Expand your vocabulary — add single words or import in bulk.</p>
 
       <div class="modal-tabs">
-        <button class="modal-tab active" data-tab="single">Single Word</button>
-        <button class="modal-tab" data-tab="bulk">Bulk Import</button>
+        <button class="modal-tab active" data-tab="single">
+          <i data-lucide="pen-line"></i>
+          Single Word
+        </button>
+        <button class="modal-tab" data-tab="bulk">
+          <i data-lucide="file-up"></i>
+          Bulk Import
+        </button>
       </div>
 
       <!-- Single word panel -->
@@ -264,24 +361,30 @@
           <label class="form-label" for="addEn">English</label>
           <input class="form-input" id="addEn" type="text" placeholder="e.g. apartment">
         </div>
-        <div class="form-group">
-          <label class="form-label" for="addType">Type <span style="color:var(--text-muted)">(optional)</span></label>
-          <input class="form-input" id="addType" type="text" placeholder="Noun (f), Verb, Adjective...">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="addType">Type <span class="optional">optional</span></label>
+            <input class="form-input" id="addType" type="text" placeholder="Noun (f), Verb...">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="addCat">Category <span class="optional">optional</span></label>
+            <input class="form-input" id="addCat" type="text" placeholder="Living, Work...">
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="addCat">Category <span style="color:var(--text-muted)">(optional)</span></label>
-          <input class="form-input" id="addCat" type="text" placeholder="Living, Work, Custom...">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="addEx">Example sentence <span style="color:var(--text-muted)">(optional)</span></label>
+          <label class="form-label" for="addEx">Example sentence <span class="optional">optional</span></label>
           <input class="form-input" id="addEx" type="text" placeholder="Ich suche eine neue {Wohnung}.">
         </div>
         <div class="form-tip">
-          💡 <strong>Tip:</strong> Use <code>{curly braces}</code> around the target word in the example — it will be highlighted on the card.
+          <i data-lucide="lightbulb"></i>
+          <span>Use <code>{curly braces}</code> around the target word in examples — it gets highlighted on the card.</span>
         </div>
         <div class="modal-actions">
-          <button class="modal-btn primary" id="addSingleBtn">Add Word</button>
-          <button class="modal-btn secondary" id="closeAddModal">Close</button>
+          <button class="btn btn-primary" id="addSingleBtn">
+            <i data-lucide="plus"></i>
+            Add Word
+          </button>
+          <button class="btn btn-ghost" id="closeAddModal">Close</button>
         </div>
       </div>
 
@@ -294,14 +397,17 @@ der Beruf | profession | Noun (m) | Work | Was ist dein {Beruf}?
 verstehen | to understand | Verb | Communication | Ich {verstehe} das nicht."></textarea>
         </div>
         <div class="form-tip">
-          💡 <strong>Format:</strong> <code>German | English | Type | Category | Example</code><br>
-          Only German and English are required. Separate fields with <code>|</code> (pipe).<br>
-          Use <code>{curly braces}</code> around the target word in examples.
+          <i data-lucide="info"></i>
+          <span><strong>Format:</strong> <code>German | English | Type | Category | Example</code><br>
+          Only German and English are required. Separate with <code>|</code> pipe.</span>
         </div>
         <div class="import-result" id="importResult"></div>
         <div class="modal-actions">
-          <button class="modal-btn primary" id="bulkImportBtn">Import All</button>
-          <button class="modal-btn secondary" id="closeAddModal2">Close</button>
+          <button class="btn btn-primary" id="bulkImportBtn">
+            <i data-lucide="upload"></i>
+            Import All
+          </button>
+          <button class="btn btn-ghost" id="closeAddModal2">Close</button>
         </div>
       </div>
     </div>
@@ -310,53 +416,65 @@ verstehen | to understand | Verb | Communication | Ich {verstehe} das nicht."></
   <!-- ═══ STATS DETAIL MODAL ═══ -->
   <div class="modal-overlay" id="statsModal" role="dialog" aria-labelledby="statsModalTitle">
     <div class="modal">
-      <h2 class="modal-title" id="statsModalTitle">📊 Your Progress</h2>
+      <div class="modal-header">
+        <h2 class="modal-title" id="statsModalTitle">
+          <i data-lucide="bar-chart-3"></i>
+          Your Progress
+        </h2>
+        <button class="modal-close" id="closeStatsModalX" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
       <p class="modal-subtitle">All-time stats and session history.</p>
 
       <div class="stats-detail-grid">
-        <div class="stats-detail-card">
-          <div class="stat-value blue" id="allTimeReviews">0</div>
+        <div class="stats-detail-card blue">
+          <div class="stat-value" id="allTimeReviews">0</div>
           <div class="stat-label">Total Reviews</div>
         </div>
-        <div class="stats-detail-card">
-          <div class="stat-value gold" id="allTimeAccuracy">—</div>
+        <div class="stats-detail-card amber">
+          <div class="stat-value" id="allTimeAccuracy">—</div>
           <div class="stat-label">All-Time Accuracy</div>
         </div>
-        <div class="stats-detail-card">
-          <div class="stat-value red" id="allTimeBestStreak">0</div>
+        <div class="stats-detail-card orange">
+          <div class="stat-value" id="allTimeBestStreak">0</div>
           <div class="stat-label">Best Streak</div>
         </div>
-        <div class="stats-detail-card">
-          <div class="stat-value green" id="allTimeWords">0</div>
+        <div class="stats-detail-card emerald">
+          <div class="stat-value" id="allTimeWords">0</div>
           <div class="stat-label">Total Words</div>
         </div>
       </div>
 
-      <h3 style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Strength Distribution</h3>
-      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <div class="stats-section-title">Strength Distribution</div>
+      <div class="distribution-pills">
         <span class="strength-pill pill-new">New: <strong id="distNew">0</strong></span>
         <span class="strength-pill pill-weak">Weak: <strong id="distWeak">0</strong></span>
         <span class="strength-pill pill-learning">Learning: <strong id="distLearning">0</strong></span>
         <span class="strength-pill pill-strong">Strong: <strong id="distStrong">0</strong></span>
       </div>
 
-      <h3 style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;font-weight:600;">Session History</h3>
+      <div class="stats-section-title">Session History</div>
       <div class="history-list" id="historyList"></div>
 
       <div class="modal-actions" style="margin-top:16px;">
-        <button class="modal-btn secondary" id="closeStatsModal">Close</button>
+        <button class="btn btn-ghost" id="closeStatsModal">Close</button>
       </div>
     </div>
   </div>
 
   <!-- ═══ FOOTER ═══ -->
   <footer class="footer">
-    <div>Viel Erfolg bei deiner telc B1 Prüfung! 🍀</div>
-    <div style="margin-top:4px;">DeutschTrainer — Practice smarter, not harder.</div>
+    <div class="container footer-inner">
+      <span>Viel Erfolg bei deiner telc B1 Prüfung! 🍀</span>
+      <span class="footer-sep">·</span>
+      <span>DeutschTrainer — Practice smarter, not harder.</span>
+    </div>
   </footer>
 
   <!-- Scripts -->
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
