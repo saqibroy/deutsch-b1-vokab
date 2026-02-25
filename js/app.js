@@ -20,6 +20,10 @@
   const PILL_CLASSES = ['pill-new', 'pill-weak', 'pill-learning', 'pill-learning', 'pill-strong'];
   const DOT_COLORS = ['#6366f1', '#ef4444', '#f59e0b', '#f59e0b', '#22c55e'];
 
+  const STRENGTH_BADGE_CLASS = ['strength-new', 'strength-weak', 'strength-learning', 'strength-learning', 'strength-strong'];
+  const STRENGTH_ICONS = ['circle-dot', 'alert-circle', 'loader', 'trending-up', 'check-circle-2'];
+  const STRENGTH_BORDER_CLASS = ['strength-border-new', 'strength-border-weak', 'strength-border-learning', 'strength-border-learning', 'strength-border-strong'];
+
   /* ══════════════════════════════════════════════════
      STATE
      ══════════════════════════════════════════════════ */
@@ -390,8 +394,18 @@
     typedResult = null;
     $('cardInner').classList.remove('flipped');
 
-    // Meta
-    $('strengthDot').style.background = DOT_COLORS[s.strength];
+    // Strength badge
+    const badge = $('strengthBadge');
+    badge.className = 'strength-badge ' + STRENGTH_BADGE_CLASS[s.strength];
+    const badgeIcon = badge.querySelector('i');
+    if (badgeIcon) badgeIcon.setAttribute('data-lucide', STRENGTH_ICONS[s.strength]);
+    $('strengthLabel').textContent = STRENGTH_NAMES[s.strength];
+
+    // Card border accent based on strength
+    const cardFront = document.querySelector('.card-front');
+    cardFront.classList.remove(...STRENGTH_BORDER_CLASS);
+    cardFront.classList.add(STRENGTH_BORDER_CLASS[s.strength]);
+
     $('cardCatText').textContent = w.cat;
 
     const filtered = getFilteredIndices();
@@ -414,7 +428,7 @@
       $('cardFrontWord').textContent = w.de;
       $('cardBackWord').textContent = w.en;
     } else {
-      $('cardType').textContent = '';
+      $('cardType').textContent = w.type;
       $('cardFrontWord').textContent = w.en;
       $('cardBackWord').textContent = w.de;
     }
@@ -508,12 +522,6 @@
     inp.className = 'type-input ' + (isCorrect ? 'correct' : 'incorrect');
     inp.disabled = true;
 
-    // Show celebration for typed correct answers
-    if (isCorrect && typeof confetti === 'function') {
-      confetti({ particleCount: 30, spread: 45, origin: { y: 0.65 }, gravity: 1.1 });
-      spawnCelebrationEmoji('✨');
-    }
-
     // Auto-mark based on typed result
     $('cardInner').classList.add('flipped');
     isFlipped = true;
@@ -540,6 +548,7 @@
 
   function markRight() {
     const s = state[currentIdx];
+    const prevStrength = s.strength;
     s.correct++;
     s.strength = Math.min(4, s.strength + 1);
     session.correct++;
@@ -554,25 +563,50 @@
     updateStreakBadge();
     renderWordList();
 
-    // Celebrate with confetti and emojis on every correct answer!
-    if (typeof confetti === 'function') {
-      // Small burst on every correct
-      confetti({ particleCount: 25, spread: 40, origin: { y: 0.65 }, gravity: 1.2, scalar: 0.8 });
-      
-      // Bigger bursts at milestones
-      if (session.streak === 3) {
-        confetti({ particleCount: 50, spread: 55, origin: { y: 0.6 } });
-        spawnCelebrationEmoji('🔥');
-      } else if (session.streak === 5) {
-        confetti({ particleCount: 80, spread: 70, origin: { y: 0.55 } });
+    // ── Meaningful celebrations only ──
+    const leveled = s.strength > prevStrength;
+
+    // Immediately update the strength badge to show the new level
+    if (leveled) {
+      const badge = $('strengthBadge');
+      badge.className = 'strength-badge ' + STRENGTH_BADGE_CLASS[s.strength] + ' level-up-pop';
+      const badgeIcon = badge.querySelector('i');
+      if (badgeIcon) badgeIcon.setAttribute('data-lucide', STRENGTH_ICONS[s.strength]);
+      $('strengthLabel').textContent = STRENGTH_NAMES[s.strength];
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      // Update card border accent
+      const cardFront = document.querySelector('.card-front');
+      cardFront.classList.remove(...STRENGTH_BORDER_CLASS);
+      cardFront.classList.add(STRENGTH_BORDER_CLASS[s.strength]);
+    }
+
+    if (leveled && typeof confetti === 'function') {
+      // Word leveled up to STRONG — big celebration!
+      if (s.strength === 4) {
+        showLevelUpBanner('strong', words[currentIdx].de);
+        confetti({ particleCount: 80, angle: 60, spread: 65, origin: { x: 0, y: 0.6 } });
+        confetti({ particleCount: 80, angle: 120, spread: 65, origin: { x: 1, y: 0.6 } });
+        spawnCelebrationEmoji('💪');
         spawnCelebrationEmoji('⭐');
+      }
+      // Word leveled up to LEARNING (2) or DECENT (3) — medium celebration
+      else if (s.strength >= 2) {
+        showLevelUpBanner('learning', words[currentIdx].de);
+        confetti({ particleCount: 35, spread: 50, origin: { y: 0.6 }, gravity: 1.1 });
+      }
+    }
+
+    // Streak milestones (independent of level-up)
+    if (typeof confetti === 'function') {
+      if (session.streak === 5) {
+        spawnCelebrationEmoji('🔥');
+        if (!leveled) confetti({ particleCount: 40, spread: 55, origin: { y: 0.6 } });
       } else if (session.streak === 10) {
-        // Double burst from both sides
-        confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } });
-        confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } });
+        confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } });
+        confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } });
         spawnCelebrationEmoji('🏆');
       } else if (session.streak > 0 && session.streak % 25 === 0) {
-        // Fireworks!
         const duration = 1500;
         const end = Date.now() + duration;
         (function frame() {
@@ -582,15 +616,9 @@
         })();
         spawnCelebrationEmoji('🎆');
       }
-      
-      // Level up celebration (when strength increases to a new level)
-      if (s.strength === 4) {
-        spawnCelebrationEmoji('💪');
-        confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 }, colors: ['#22c55e', '#10b981', '#059669'] });
-      }
     }
 
-    setTimeout(pickNext, 350);
+    setTimeout(pickNext, leveled && s.strength >= 2 ? 600 : 350);
   }
 
   function markWrong() {
@@ -648,6 +676,32 @@
     
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 1300);
+  }
+
+  function showLevelUpBanner(level, word) {
+    // Remove any existing banner
+    const old = document.querySelector('.level-up-banner');
+    if (old) old.remove();
+
+    const banner = document.createElement('div');
+    banner.className = 'level-up-banner to-' + level;
+
+    if (level === 'strong') {
+      banner.innerHTML = `
+        <div class="level-up-banner-icon">💪</div>
+        <div class="level-up-banner-title">Word Mastered!</div>
+        <div class="level-up-banner-sub">"${word}" is now <strong style="color:var(--green)">Strong</strong></div>
+      `;
+    } else {
+      banner.innerHTML = `
+        <div class="level-up-banner-icon">📈</div>
+        <div class="level-up-banner-title">Level Up!</div>
+        <div class="level-up-banner-sub">"${word}" is now <strong style="color:var(--amber)">Learning</strong></div>
+      `;
+    }
+
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 2200);
   }
 
   /* ══════════════════════════════════════════════════

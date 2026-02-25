@@ -599,10 +599,89 @@ body::after {
   gap: 8px;
 }
 
-.strength-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* ─── Strength Badge (replaces dot) ─────────────── */
+.strength-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid;
+  line-height: 1;
+  transition: all 0.3s var(--ease-out);
+}
+
+.strength-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.strength-badge.strength-new {
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-color: var(--blue-border);
+}
+
+.strength-badge.strength-weak {
+  color: var(--red);
+  background: var(--red-soft);
+  border-color: var(--red-border);
+}
+
+.strength-badge.strength-learning {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border-color: var(--amber-border);
+}
+
+.strength-badge.strength-strong {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: var(--green-border);
+}
+
+.strength-badge.level-up-pop {
+  animation: badgePop 0.5s var(--ease-spring);
+}
+
+@keyframes badgePop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Card border accent per strength */
+.card-front.strength-border-new {
+  border-color: rgba(99,102,241,0.2);
+}
+.card-front.strength-border-new::before {
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent);
+}
+
+.card-front.strength-border-weak {
+  border-color: rgba(239,68,68,0.2);
+}
+.card-front.strength-border-weak::before {
+  background: linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent);
+}
+
+.card-front.strength-border-learning {
+  border-color: rgba(245,158,11,0.2);
+}
+.card-front.strength-border-learning::before {
+  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.3), transparent);
+}
+
+.card-front.strength-border-strong {
+  border-color: rgba(34,197,94,0.25);
+}
+.card-front.strength-border-strong::before {
+  background: linear-gradient(90deg, transparent, rgba(34,197,94,0.5), transparent);
 }
 
 .card-cat {
@@ -660,11 +739,23 @@ body::after {
   gap: 6px;
 }
 
-.card-type {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  font-style: italic;
+/* ─── Word Type Badge ───────────────────────────── */
+.word-type-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--violet);
+  background: var(--violet-soft);
+  border: 1px solid rgba(139,92,246,0.2);
+  padding: 3px 12px;
+  border-radius: var(--r-full);
+  margin-bottom: 4px;
+}
+
+.word-type-badge:empty {
+  display: none;
 }
 
 .card-word {
@@ -1457,6 +1548,72 @@ textarea.form-input {
   0% { opacity: 1; transform: translateY(0) scale(0.5) rotate(0deg); }
   20% { opacity: 1; transform: translateY(-30px) scale(1.2) rotate(-10deg); }
   100% { opacity: 0; transform: translateY(-160px) scale(0.8) rotate(15deg); }
+}
+
+/* ─── Level-Up Banner ───────────────────────────── */
+.level-up-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 40px;
+  border-radius: var(--r-2xl);
+  pointer-events: none;
+  opacity: 0;
+  animation: levelUpIn 0.5s var(--ease-spring) forwards, levelUpOut 0.4s ease 1.6s forwards;
+}
+
+.level-up-banner.to-strong {
+  background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1));
+  border: 1px solid rgba(34,197,94,0.3);
+  box-shadow: 0 0 60px rgba(34,197,94,0.15), 0 0 120px rgba(34,197,94,0.05);
+}
+
+.level-up-banner.to-learning {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.1));
+  border: 1px solid rgba(245,158,11,0.3);
+  box-shadow: 0 0 60px rgba(245,158,11,0.15), 0 0 120px rgba(245,158,11,0.05);
+}
+
+.level-up-banner-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  animation: levelUpIconBounce 0.6s var(--ease-spring) 0.15s both;
+}
+
+.level-up-banner-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.level-up-banner-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+@keyframes levelUpIn {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes levelUpOut {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05) translateY(-10px); }
+}
+
+@keyframes levelUpIconBounce {
+  0% { transform: scale(0.3) rotate(-15deg); }
+  50% { transform: scale(1.3) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
 /* ─── Stat Counter Animation ────────────────────── */
